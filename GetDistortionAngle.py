@@ -1,9 +1,12 @@
-1import cv2 as cv
+import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
 from DistortionDectection import ImageAnalysis
 
-def GetDistortionAngle(org, folderpath):
+# Method summary:
+# Calculates distortion vector field for lens FOV
+# Params: Central image matrix, path to folder containing all the samples; Return: Distortion matrix for central image with vector field
+def GetFOVDistortionField(org, folderpath):
     path = glob.glob(folderpath)
     FOVmapX = np.zeros(org.shape, np.float32)
     FOVmapY = np.zeros(org.shape, np.float32)
@@ -22,37 +25,33 @@ def GetDistortionAngle(org, folderpath):
         ImageAnalysis.__AddToArray(imArrayX, flow[:, :, 1], org, shiftX, shiftY)
         
     for i in range(0, org.shape[0]):
-            for j in range(0, org.shape[1]):
-                vals = []
-                for im in imArrX:
-                    if im[i, j] != 0:
-                        vals.append(im[i, j])
-                    if len(vals) != 0:
-                        val = sum(vals)/len(vals)
-                        FOVmapX[i, j] = val
-                for im in imArrY:
-                    if im[i, j] != 0:
-                        vals.append(im[i, j])
-                    if len(vals) != 0:
-                        val = sum(vals)/len(vals)
-                        FOVmapY[i, j] = val
+        for j in range(0, org.shape[1]):
+            vals = []
+            for im in imArrX:
+                if im[i, j] != 0:
+                    vals.append(im[i, j])
+                if len(vals) != 0:
+                    val = sum(vals)/len(vals)
+                    FOVmapX[i, j] = val
+            for im in imArrY:
+                if im[i, j] != 0:
+                    vals.append(im[i, j])
+                if len(vals) != 0:
+                    val = sum(vals)/len(vals)
+                    FOVmapY[i, j] = val
                         
     FOVmap = sqrt((FOVmapX) + (FOVmapY))
     GetQuiverPlot(FOVmapX, FOVmapY, FOVmap.shape[1], FOVmap.shpae[0])
-    GetSurfacePlot(FOVmap, FOVmap.shape[1], FOVmap.shape[0])
+    ImageAnalysis.GetContourPlot(FOVmap, FOVmap.shape[1], FOVmap.shape[0])
     
     return FOVmap
 
-def GetQuiverPlot(matrix_X, matrix_Y, width, height):
-    plt.quiver(matrix_X, matrix_Y, width, height)
-    plt.axis("equal")
-    plt.gca().invert_yaxis()
-    plt.show()
-    
-def GetSurfacePlot(matrix, width, height):
-    matrix = cv.resize(matrix, (width, height))
-    plt.plot(matrix)
-    plt.colorbar()
-    plt.axis("equal")
-    plt.gca().invert_yaxis()
+# __private mathod
+# plots vector field from x and y matrices
+def __GetQuiverPlot(matrix_X, matrix_Y):
+    x, y = np.meshgrid(np.linspace(0, matrix_X.shape[1], 20), np.linspace(0, matrix_X.shape[0], 20))
+    u = cv.resize(matrix_X, (20, 20))
+    v = cv.resize(matrix_Y, (20, 20))
+    plt.quiver(x, y, u, v, scale = 150)
+    plt.axis('equal')
     plt.show()
