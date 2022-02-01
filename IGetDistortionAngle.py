@@ -1,8 +1,9 @@
 1import cv2 as cv
+import matplotlib.pyplot as plt
 import numpy as np
 from DistortionDectection import ImageAnalysis
 
-def FOVDistortion(org, folderpath):
+def GetDistortionAngle(org, folderpath):
     path = glob.glob(folderpath)
     FOVmapX = np.zeros(org.shape, np.float32)
     FOVmapY = np.zeros(org.shape, np.float32)
@@ -37,5 +38,21 @@ def FOVDistortion(org, folderpath):
                         FOVmapY[i, j] = val
                         
     FOVmap = sqrt((FOVmapX) + (FOVmapY))
-
+    GetQuiverPlot(FOVmapX, FOVmapY, FOVmap.shape[1], FOVmap.shpae[0])
+    GetSurfacePlot(FOVmap, FOVmap.shape[1], FOVmap.shape[0])
+    
     return FOVmap
+
+def GetQuiverPlot(matrix_X, matrix_Y, width, height):
+    plt.quiver(matrix_X, matrix_Y, width, height)
+    plt.axis("equal")
+    plt.gca().invert_yaxis()
+    plt.show()
+    
+def GetSurfacePlot(matrix, width, height):
+    matrix = cv.resize(matrix, (width, height))
+    plt.plot(matrix)
+    plt.colorbar()
+    plt.axis("equal")
+    plt.gca().invert_yaxis()
+    plt.show()
