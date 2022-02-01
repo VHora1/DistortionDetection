@@ -8,7 +8,7 @@ class ImageAnalysis:
     
     # Method summary:
     # Computes subpixel offset between images using phase correlation
-    # Args: Two image matrices; Out: Two offset values in pixels
+    # Params: Two image matrices; Return: Two offset values in pixels
     @staticmethod
     def PhaseCorrelation(im1, im2):
         chY = 0; chX = 0
@@ -42,7 +42,7 @@ class ImageAnalysis:
 
     # Method summary:
     # Computes optical flow matrix
-    # Args: Two image matrices; Out: Optical flow matrix
+    # Params: Two image matrices; Return: Optical flow matrix
     @staticmethod
     def OpticalFlow(im1, im2):
         flow = cv.calcOpticalFlowFarneback(im1, im2, cv.CV_32FC2, pyr_scale=0.5, levels=1, winsize=15, iterations=3, poly_n=7, poly_sigma=1.5, flags=0)
@@ -51,7 +51,7 @@ class ImageAnalysis:
 
     # Method summary:
     # Moves image matrix by given values
-    # Args: An image, horizontal shift value and vertical shift value; Out: Shifted image matrix
+    # Params: An image, horizontal shift value and vertical shift value; Return: Shifted image matrix
     @staticmethod
     def Shift(im, x, y):
         transMat = np.float32([[1, 0, x], [0, 1, y]])
@@ -104,28 +104,22 @@ class ImageAnalysis:
 
     # Method summary:
     # Computes distortion between two images
-    # Args: Two image matrices; Out: Distortion matrix
+    # Params: Two image matrices; Return: Distortion matrix
     @staticmethod
-    def CalcDistortion(im1, im2, surfPlot=false, vecPlot=false):
+    def CalcDistortion(im1, im2):
 
         shiftX, shiftY = ImageAnalysis.PhaseCorrelation(im1, im2)
         im2 = ImageAnalysis.Shift(im2, shiftY, shiftX)       
         im1, im2 = ImageAnalysis.__Crop(im1, im2, shiftX, shiftY, im1.shape[0], im1.shape[1])
 
         flow = ImageAnalysis.OpticalFlow(im1, im2)
-        
-        if vecPlot:
-            ImageAnalysis.__GetQuiverPlot(flow, flow.shape[0], flow.shape[1])
-        if surfPlot:
-            ImageAnalysis.__GetSurfacePlot(flow, 64, 64)
-            
         return flow
 
     # Method summary:
     # Computes distortion of FOV
-    # Args: Central image matrix, path to folder containing all the samples; Out: Distortion matrix for central image
+    # Params: Central image matrix, path to folder containing all the samples; Return: Distortion matrix for central image
     @staticmethod
-    def FOVDistortion(org, folderpath):
+    def FOVDistortion(org, folderpath, contourPlot=false):
         path = glob.glob(folderpath)
         FOVmap = np.zeros(org.shape, np.float32)
         imArray = []
@@ -141,5 +135,19 @@ class ImageAnalysis:
             flow = ImageAnalysis.OpticalFlow(im1, im2)
             ImageAnalysis.__AddToArray(imArray, flow, org, shiftX, shiftY)
 
-        ImageAnalysis.__CreateDistortionMatrix(org, FOVmap, imArray)
+        ImageAnalysis.__CreateDistortionMatrix(org, FOVmap, imArray)   
+        if contourPlot:
+            ImageAnalysis.GetContourPlot(FOVmap, 64, 4)
+            
         return FOVmap
+    
+    # Method summary:
+    # Plots contour plot of given matrix
+    # Params: matrix, size of resulting plot, contour levels; Return: --
+    @staticmethod
+    def GetContourPlot(matrix, size, levels):
+        matrix = cv.resize(matrix, (size, size))
+        plt.contourf(matrix, levels)
+        plt.colorbar()
+        plt.gca().invert_yaxis()
+        plt.show()      
