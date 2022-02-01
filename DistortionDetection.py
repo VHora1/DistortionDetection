@@ -106,13 +106,19 @@ class ImageAnalysis:
     # Computes distortion between two images
     # Args: Two image matrices; Out: Distortion matrix
     @staticmethod
-    def CalcDistortion(im1, im2):
+    def CalcDistortion(im1, im2, surfPlot=false, vecPlot=false):
 
         shiftX, shiftY = ImageAnalysis.PhaseCorrelation(im1, im2)
         im2 = ImageAnalysis.Shift(im2, shiftY, shiftX)       
         im1, im2 = ImageAnalysis.__Crop(im1, im2, shiftX, shiftY, im1.shape[0], im1.shape[1])
 
         flow = ImageAnalysis.OpticalFlow(im1, im2)
+        
+        if vecPlot:
+            ImageAnalysis.__GetQuiverPlot(flow, flow.shape[0], flow.shape[1])
+        if surfPlot:
+            ImageAnalysis.__GetSurfacePlot(flow, 64, 64)
+            
         return flow
 
     # Method summary:
