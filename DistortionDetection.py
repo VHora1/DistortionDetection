@@ -8,7 +8,7 @@ class ImageAnalysis:
     
     # Method summary:
     # Computes subpixel offset between images using phase correlation
-    # Params: Two image matrices; Return: Two offset values in pixels
+    # Args: Two image matrices; Out: Two offset values in pixels
     @staticmethod
     def PhaseCorrelation(im1, im2):
         chY = 0; chX = 0
@@ -42,7 +42,7 @@ class ImageAnalysis:
 
     # Method summary:
     # Computes optical flow matrix
-    # Params: Two image matrices; Return: Optical flow matrix
+    # Args: Two image matrices; Out: Optical flow matrix
     @staticmethod
     def OpticalFlow(im1, im2):
         flow = cv.calcOpticalFlowFarneback(im1, im2, cv.CV_32FC2, pyr_scale=0.5, levels=1, winsize=15, iterations=3, poly_n=7, poly_sigma=1.5, flags=0)
@@ -51,7 +51,7 @@ class ImageAnalysis:
 
     # Method summary:
     # Moves image matrix by given values
-    # Params: An image, horizontal shift value and vertical shift value; Return: Shifted image matrix
+    # Args: An image, horizontal shift value and vertical shift value; Out: Shifted image matrix
     @staticmethod
     def Shift(im, x, y):
         transMat = np.float32([[1, 0, x], [0, 1, y]])
@@ -88,23 +88,9 @@ class ImageAnalysis:
         temp[x:cols, y:rows] = im
         list.append(temp)
 
-    # __private method
-    # Averages distortion values
-    @staticmethod
-    def __CreateDistortionMatrix(org, FOVmap, imArr):
-        for i in range(0, org.shape[0]):
-            for j in range(0, org.shape[1]):
-                vals = []
-                for im in imArr:
-                    if im[i, j] != 0:
-                        vals.append(im[i, j])
-                    if len(vals) != 0:
-                        val = sum(vals)/len(vals)
-                        FOVmap[i, j] = val
-
     # Method summary:
     # Computes distortion between two images
-    # Params: Two image matrices; Return: Distortion matrix
+    # Args: Two image matrices; Out: Distortion matrix
     @staticmethod
     def CalcDistortion(im1, im2):
 
@@ -119,10 +105,11 @@ class ImageAnalysis:
     # Computes distortion of FOV
     # Params: Central image matrix, path to folder containing all the samples; Return: Distortion matrix for central image
     @staticmethod
-    def FOVDistortion(org, folderpath, contourPlot=false):
+    def FOVDistortionField(org, folderpath):
         path = glob.glob(folderpath)
-        FOVmap = np.zeros(org.shape, np.float32)
-        imArray = []
+        FOVmapX = np.zeros(org.shape, np.float32)
+        FOVmapY = np.zeros(org.shape, np.float32)
+        imArrayX = []; imArrayY = []
 
         for image in path:
             im1 = org.copy()
@@ -132,15 +119,46 @@ class ImageAnalysis:
             im2 = ImageAnalysis.Shift(im2, shiftY, shiftX)       
             im1, im2 = ImageAnalysis.__Crop(im1, im2, shiftX, shiftY, im1.shape[0], im1.shape[1])
 
-            flow = ImageAnalysis.OpticalFlow(im1, im2)
-            ImageAnalysis.__AddToArray(imArray, flow, org, shiftX, shiftY)
-
-        ImageAnalysis.__CreateDistortionMatrix(org, FOVmap, imArray)   
-        if contourPlot:
-            ImageAnalysis.GetContourPlot(FOVmap, 64, 4)
-            
+            flow = cv.calcOpticalFlowFarneback(im1, im2, cv.CV_32FC2, pyr_scale=0.5, levels=1, winsize=15, iterations=3, poly_n=7, poly_sigma=1.5, flags=0)
+            ImageAnalysis.__AddToArray(imArrayY, flow[:, :, 0], org, shiftX, shiftY)
+            ImageAnalysis.__AddToArray(imArrayX, flow[:, :, 1], org, shiftX, shiftY)
+        
+            del im1, im2, image, 
+             
+        for i in range(0, org.shape[0]):
+            for j in range(0, org.shape[1]):
+                valsX = []
+                valsY = []
+                for im in imArrayX:
+                    if im[i, j] != 0:
+                        valsX.append(im[i, j])
+                    if len(valsX) != 0:
+                        val = sum(valsX)/len(valsX)
+                        FOVmapX[i, j] = val
+                for im in imArrayY:
+                    if im[i, j] != 0:
+                        valsY.append(im[i, j])
+                    if len(valsY) != 0:
+                        val = sum(valsY)/len(valsY)
+                        FOVmapY[i, j] = val
+                            
+        FOVmap = cv.sqrt((FOVmapX)**2 + (FOVmapY)**2)
+        ImageAnalysis.__GetQuiverPlot(FOVmapX, FOVmapY)
+        ImageAnalysis.GetContourPlot(FOVmap, 64, 4)
+        
         return FOVmap
-    
+
+    # __private method
+    # Plots vector field from x and y matrices
+    @staticmethod
+    def __GetQuiverPlot(matrix_X, matrix_Y):
+        x, y = np.meshgrid(np.linspace(0, matrix_X.shape[1], 20), np.linspace(0, matrix_X.shape[0], 20))
+        u = cv.resize(matrix_X, (20, 20))
+        v = cv.resize(matrix_Y, (20, 20))
+        plt.quiver(x, y, u, v, scale = 150)
+        plt.axis('equal')
+        plt.show()
+
     # Method summary:
     # Plots contour plot of given matrix
     # Params: matrix, size of resulting plot, contour levels; Return: --
@@ -150,4 +168,4 @@ class ImageAnalysis:
         plt.contourf(matrix, levels)
         plt.colorbar()
         plt.gca().invert_yaxis()
-        plt.show()      
+        plt.show()  
